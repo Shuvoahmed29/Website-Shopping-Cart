@@ -1,84 +1,66 @@
-// Api Call 
+// API Call 
 const URL = "https://fakestoreapiserver.reactbd.com/nextamazon";
 let cardID = document.querySelector('.cardID');
 let mainDiv = document.querySelector('.mainDiv');
 
-const addCartButtons = [];
-addCartButtons.push(document.querySelector('.add-cart'));
-
-
-function addProduct(jsonData){
-    for(let i=0;i<jsonData.length;i++){
-        let clone = cardID.cloneNode(true); 
+function addProduct(jsonData) {
+    jsonData.forEach(product => {
+        let clone = cardID.cloneNode(true);
+        clone.style.display = "block";
 
         let productTitle = clone.querySelector('.productTitle');
-        productTitle.innerText = jsonData[i].title;
+        productTitle.innerText = product.title;
 
         let productImage = clone.querySelector('.productImage');
-        productImage.src = jsonData[i].image;
-                
+        productImage.src = product.image;
+
         let productDescription = clone.querySelector('.productDescription');
-        productDescription.innerText = jsonData[i].description;
+        productDescription.innerText = product.description;
 
         let oldPrice = clone.querySelector('.oldPrice');
-        oldPrice.innerText = (parseFloat(jsonData[i].oldPrice) * 120).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        
+        oldPrice.innerText = (parseFloat(product.oldPrice) * 120).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
         let newPrice = clone.querySelector('.newPrice');
-        newPrice.innerText = (jsonData[i].price * 120).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
+        newPrice.innerText = (product.price * 120).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
         let band = clone.querySelector('.band');
-        band.innerText = jsonData[i].brand;
+        band.innerText = product.brand;
 
         let category = clone.querySelector('.category');
-        category.innerText = jsonData[i].category;
+        category.innerText = product.category;
 
-        mainDiv.appendChild(clone); 
-        addCartButtons.push(document.querySelector('.add-cart'));
-    }
+        let addCartButton = clone.querySelector('.add-cart');
+        addCartButton.addEventListener('click', () => addToCart(clone));
+
+        mainDiv.appendChild(clone);
+    });
 }
 
-const getFacts = async () => {
+const getProducts = async () => {
     let response = await fetch(URL);
     let jsonData = await response.json();
     addProduct(jsonData);
 };
-getFacts();
+getProducts();
 
 
-
-
-
-// Showing Cart 
+// Cart Functionality 
 const cartIcon = document.querySelector('#cart-icon');
 const cart = document.querySelector('.cart');
 const cartClose = document.querySelector('#cart-close');
-cartIcon.addEventListener('click',() => cart.classList.add('active'));
-cartClose.addEventListener('click',() => cart.classList.remove('active'));
-
-
-// Add item in Cart 
-// const addCartButtons = document.querySelectorAll('.add-cart');
-console.log("Button: ",addCartButtons);
-addCartButtons.forEach(button =>{
-    button.addEventListener('click',event =>{
-        const productBox = event.target.closest('.product-box');
-        console.log("Product: ",productBox);
-        addToCart(productBox);
-    });
-});
+cartIcon.addEventListener('click', () => cart.classList.add('active'));
+cartClose.addEventListener('click', () => cart.classList.remove('active'));
 
 const cartContent = document.querySelector('.cart-content');
 
-const addToCart = productBox =>{
-    const productImgSrc = productBox.querySelector('img').src;
-    const productTitle = productBox.querySelector('.product-title').textContent;
-    const productPrice = productBox.querySelector('.price').textContent;
+const addToCart = (productBox) => {
+    const productImgSrc = productBox.querySelector('.productImage').src;
+    const productTitle = productBox.querySelector('.productTitle').textContent;
+    const productPrice = productBox.querySelector('.newPrice').textContent;
 
     const cartItems = cartContent.querySelectorAll('.cart-product-title');
-    for(let item of cartItems){
-        if(item.textContent === productTitle){
+    for (let item of cartItems) {
+        if (item.textContent === productTitle) {
             alert('This item is already in the cart!');
             return;
         }
@@ -91,90 +73,81 @@ const addToCart = productBox =>{
         <div class="cart-detail">
             <h2 class="cart-product-title">${productTitle}</h2>
             <span class="cart-price">${productPrice}</span>
-                <div class="cart-quantity">
-                    <button id="decrement">-</button>
-                    <span class="number">1</span>
-                    <button id="increment">+</button>
-                </div>
+            <div class="cart-quantity">
+                <button class="decrement">-</button>
+                <span class="number">1</span>
+                <button class="increment">+</button>
+            </div>
         </div>
         <i class="ri-delete-bin-line cart-remove"></i>
     `;
 
     cartContent.appendChild(cartBox);
 
-    cartBox.querySelector('.cart-remove').addEventListener('click',()=>{
+    cartBox.querySelector('.cart-remove').addEventListener('click', () => {
         cartBox.remove();
         updateTotalPrice();
         updateCartCount(-1);
     });
 
-    cartBox.querySelector('.cart-quantity').addEventListener('click',event=>{
+    cartBox.querySelector('.cart-quantity').addEventListener('click', event => {
         const numberElement = cartBox.querySelector('.number');
-        const decrementButton = cartBox.querySelector('#decrement');
-        let quantity = numberElement.textContent;
+        let quantity = parseInt(numberElement.textContent);
 
-        if(event.target.id === 'decrement' && quantity>1){
+        if (event.target.classList.contains('decrement') && quantity > 1) {
             quantity--;
-            if(quantity===1){
-                decrementButton.style.color = '#999';
-            }
-        }else if(event.target.id ==='increment'){
+        } else if (event.target.classList.contains('increment')) {
             quantity++;
-            decrementButton.style.color = '#333';
         }
+
         numberElement.textContent = quantity;
         updateTotalPrice();
     });
+
     updateCartCount(1);
     updateTotalPrice();
-}
+};
 
-
-const updateTotalPrice = () =>{
+const updateTotalPrice = () => {
     const totalPriceElement = document.querySelector('.total-price');
     const cartBoxes = cartContent.querySelectorAll('.cart-box');
     let total = 0;
-    cartBoxes.forEach(carBox =>{
-        const priceElement = carBox.querySelector('.cart-price');
-        const quantityElement = carBox.querySelector('.number');
+    cartBoxes.forEach(cartBox => {
+        const priceElement = cartBox.querySelector('.cart-price');
+        const quantityElement = cartBox.querySelector('.number');
 
-        const price = priceElement.textContent.replace('$','');
-        const quantity = quantityElement.textContent;
-        total += price*quantity;
+        const price = parseFloat(priceElement.textContent.replace(/,/g, ''));
+        const quantity = parseInt(quantityElement.textContent);
+        total += price * quantity;
     });
-    totalPriceElement.textContent = `$${total}`;
-}
-
+    totalPriceElement.textContent = `${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Taka`;
+};
 
 let cartItemCount = 0;
-const updateCartCount = change =>{
+const updateCartCount = (change) => {
     const cartItemCountBadge = document.querySelector('.cart-item-count');
     cartItemCount += change;
-    if(cartItemCount>0){
+    if (cartItemCount > 0) {
         cartItemCountBadge.style.visibility = 'visible';
         cartItemCountBadge.textContent = cartItemCount;
-    }else{
+    } else {
         cartItemCountBadge.style.visibility = 'hidden';
-        cartItemCount.textContent = '';
+        cartItemCountBadge.textContent = '';
     }
-}
-
+};
 
 const buyNowButton = document.querySelector('.btn-buy');
-buyNowButton.addEventListener('click',()=>{
+buyNowButton.addEventListener('click', () => {
     const cartBoxes = cartContent.querySelectorAll('.cart-box');
-    if(cartBoxes.length === 0){
+    if (cartBoxes.length === 0) {
         alert('Your cart is empty. Please add items to your cart before buying...');
         return;
     }
 
     cartBoxes.forEach(cartBox => cartBox.remove());
-
     cartItemCount = 0;
     updateCartCount(0);
-
     updateTotalPrice();
 
     alert('Thank you for your purchase!');
-
 });
